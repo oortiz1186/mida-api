@@ -1,0 +1,4 @@
+appsettings.Development.json
+*.Development.json
+.env
+.env.*
