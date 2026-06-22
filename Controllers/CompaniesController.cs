@@ -1,6 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using SoporteMida.Api.Dtos;
-using SoporteMida.Api.Models;
 using SoporteMida.Api.Services;
 
 namespace SoporteMida.Api.Controllers;
@@ -9,30 +7,17 @@ namespace SoporteMida.Api.Controllers;
 [Route("api/companies")]
 public class CompaniesController : ControllerBase
 {
-    private readonly SupabaseClientService _supabase;
+    private readonly CompanyService _companyService;
 
-    public CompaniesController(SupabaseClientService supabase)
+    public CompaniesController(CompanyService companyService)
     {
-        _supabase = supabase;
+        _companyService = companyService;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetCompanies()
     {
-        var response = await _supabase.Client
-            .From<Company>()
-            .Get();
-
-        var companies = response.Models.Select(company => new CompanyDto
-        {
-            Id = company.Id,
-            Name = company.Name,
-            Rfc = company.Rfc,
-            Phone = company.Phone,
-            Email = company.Email,
-            CreatedAt = company.CreatedAt
-        });
-
+        var companies = await _companyService.GetCompaniesAsync();
         return Ok(companies);
     }
 }
