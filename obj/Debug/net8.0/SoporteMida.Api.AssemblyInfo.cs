@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SoporteMida.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+828ff6cc296e4fa172e4f794f2e497a9f885cbbb")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a9adbd4f852fd1517d36d877590427267ea91f78")]
 [assembly: System.Reflection.AssemblyProductAttribute("SoporteMida.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SoporteMida.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
