@@ -1,0 +1,41 @@
+using Supabase.Postgrest.Attributes;
+using Supabase.Postgrest.Models;
+
+namespace SoporteMida.Api.Models;
+
+[Table("ticket_companies")]
+public class TicketCompany : BaseModel
+{
+    [PrimaryKey("id", false)]
+    public Guid Id { get; set; }
+
+    [Column("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [Column("active")]
+    public bool Active { get; set; } = true;
+
+    [Column("rfc")]
+    public string? Rfc { get; set; }
+
+    [Column("email")]
+    public string? Email { get; set; }
+
+    [Column("phone")]
+    public string? Phone { get; set; }
+
+    [Column("contpaqi_customer_id")]
+    public int? ContpaqiCustomerId { get; set; }
+
+    [Column("contpaqi_code")]
+    public string? ContpaqiCode { get; set; }
+
+    [Column("contpaqi_database")]
+    public string? ContpaqiDatabase { get; set; }
+
+    [Column("last_synced_at")]
+    public DateTime? LastSyncedAt { get; set; }
+
+    [Column("updated_at")]
+    public DateTime? UpdatedAt { get; set; }
+}

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SoporteMida.Api.Integrations.Contpaqi.Services;
+using SoporteMida.Api.Integrations.Contpaqi.Dtos;
 
 namespace SoporteMida.Api.Controllers;
 

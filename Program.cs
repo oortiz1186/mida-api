@@ -11,6 +11,7 @@ builder.Services.Configure<ContpaqiSqlSettings>(
     builder.Configuration.GetSection("ContpaqiSql")
 );
 builder.Services.AddScoped<ContpaqiSqlService>();
+builder.Services.AddScoped<ContpaqiCustomerSyncService>();
 
 
 builder.Services.AddSingleton<SupabaseClientService>();
@@ -18,7 +19,10 @@ builder.Services.AddScoped<CompanyService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.EnableAnnotations();
+});
 
 var app = builder.Build();
 
