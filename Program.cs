@@ -12,6 +12,8 @@ builder.Services.Configure<ContpaqiSqlSettings>(
 );
 builder.Services.AddScoped<ContpaqiSqlService>();
 builder.Services.AddScoped<ContpaqiCustomerSyncService>();
+builder.Services.AddScoped<ContpaqiContactSyncService>();
+builder.Services.AddScoped<ContpaqiAgentSyncService>();
 
 
 builder.Services.AddSingleton<SupabaseClientService>();

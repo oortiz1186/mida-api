@@ -11,4 +11,6 @@ public class ContpaqiCustomerDto
     public string? RegimenFiscal { get; set; }
     public string? Whatsapp { get; set; }
     public int Estatus { get; set; }
+    public string? Email2 { get; set; }
+    public string? Email3 { get; set; }
 }

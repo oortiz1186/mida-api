@@ -66,6 +66,49 @@ public class ContpaqiSqlService
         return movements;
     }
 
+    public async Task<List<ContpaqiAgentDto>> GetAgentsAsync(string databaseName)
+    {
+        var agents = new List<ContpaqiAgentDto>();
+
+        var builder = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = databaseName
+        };
+
+        using var connection = new SqlConnection(builder.ConnectionString);
+
+        await connection.OpenAsync();
+
+        const string sql = @"
+        SELECT
+            CIDAGENTE,
+            CCODIGOAGENTE,
+            CNOMBREAGENTE,
+            CTIPOAGENTE,
+            CFECHAALTAAGENTE
+        FROM admAgentes
+        WHERE CIDAGENTE > 0
+        ORDER BY CNOMBREAGENTE";
+
+        using var command = new SqlCommand(sql, connection);
+
+        using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            agents.Add(new ContpaqiAgentDto
+            {
+                Id = Convert.ToInt32(reader["CIDAGENTE"]),
+                Codigo = reader["CCODIGOAGENTE"]?.ToString()?.Trim() ?? "",
+                Nombre = reader["CNOMBREAGENTE"]?.ToString()?.Trim() ?? "",
+                Tipo = Convert.ToInt32(reader["CTIPOAGENTE"]),
+                FechaAlta = Convert.ToDateTime(reader["CFECHAALTAAGENTE"])
+            });
+        }
+
+        return agents;
+    }
+
     public async Task<List<ContpaqiDocumentDto>> GetDocumentsAsync(string databaseName)
     {
         var documents = new List<ContpaqiDocumentDto>();
@@ -183,19 +226,21 @@ public class ContpaqiSqlService
         await connection.OpenAsync();
 
         const string sql = @"
-        SELECT
-            CIDCLIENTEPROVEEDOR,
-            CCODIGOCLIENTE,
-            CRAZONSOCIAL,
-            CRFC,
-            CEMAIL1,
-            CUSOCFDI,
-            CREGIMFISC,
-            CWHATSAPP,
-            CESTATUS
-        FROM admClientes
-        WHERE CIDCLIENTEPROVEEDOR > 0
-        ORDER BY CRAZONSOCIAL";
+    SELECT
+        CIDCLIENTEPROVEEDOR,
+        CCODIGOCLIENTE,
+        CRAZONSOCIAL,
+        CRFC,
+        CEMAIL1,
+        CEMAIL2,
+        CEMAIL3,
+        CUSOCFDI,
+        CREGIMFISC,
+        CWHATSAPP,
+        CESTATUS
+    FROM admClientes
+    WHERE CIDCLIENTEPROVEEDOR > 0
+    ORDER BY CRAZONSOCIAL";
 
         using var command = new SqlCommand(sql, connection);
 
@@ -210,6 +255,8 @@ public class ContpaqiSqlService
                 RazonSocial = reader["CRAZONSOCIAL"]?.ToString()?.Trim() ?? "",
                 Rfc = reader["CRFC"]?.ToString()?.Trim(),
                 Email = reader["CEMAIL1"]?.ToString()?.Trim(),
+                Email2 = reader["CEMAIL2"]?.ToString()?.Trim(),
+                Email3 = reader["CEMAIL3"]?.ToString()?.Trim(),
                 UsoCfdi = reader["CUSOCFDI"]?.ToString()?.Trim(),
                 RegimenFiscal = reader["CREGIMFISC"]?.ToString()?.Trim(),
                 Whatsapp = reader["CWHATSAPP"]?.ToString()?.Trim(),
@@ -275,6 +322,48 @@ public class ContpaqiSqlService
         IOptions<ContpaqiSqlSettings> settings)
     {
         _connectionString = settings.Value.ConnectionString;
+    }
+    public async Task<List<object>> SearchColumnsAsync(
+    string databaseName,
+    string term)
+    {
+        var result = new List<object>();
+
+        var builder = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = databaseName
+        };
+
+        using var connection = new SqlConnection(builder.ConnectionString);
+        await connection.OpenAsync();
+
+        const string sql = @"
+        SELECT
+            TABLE_NAME,
+            COLUMN_NAME,
+            DATA_TYPE
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE
+            COLUMN_NAME LIKE @term
+            OR TABLE_NAME LIKE @term
+        ORDER BY TABLE_NAME, COLUMN_NAME";
+
+        using var command = new SqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@term", $"%{term}%");
+
+        using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            result.Add(new
+            {
+                TableName = reader["TABLE_NAME"]?.ToString(),
+                ColumnName = reader["COLUMN_NAME"]?.ToString(),
+                DataType = reader["DATA_TYPE"]?.ToString()
+            });
+        }
+
+        return result;
     }
 
     public async Task<List<string>> GetDatabasesAsync()

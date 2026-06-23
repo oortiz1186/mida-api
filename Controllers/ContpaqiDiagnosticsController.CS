@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SoporteMida.Api.Integrations.Contpaqi.Services;
 using SoporteMida.Api.Integrations.Contpaqi.Dtos;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace SoporteMida.Api.Controllers;
 
@@ -100,5 +101,20 @@ public class ContpaqiDiagnosticsController : ControllerBase
             .GetDocumentMovementsAsync(databaseName, documentId);
 
         return Ok(movements);
+    }
+
+    [HttpGet("search-columns/{databaseName}/{term}")]
+    [SwaggerOperation(
+    Summary = "Buscar columnas o tablas",
+    Description = "Busca tablas o columnas dentro de una base CONTPAQi usando una palabra clave."
+)]
+    public async Task<IActionResult> SearchColumns(
+    string databaseName,
+    string term)
+    {
+        var result = await _contpaqiSqlService
+            .SearchColumnsAsync(databaseName, term);
+
+        return Ok(result);
     }
 }
