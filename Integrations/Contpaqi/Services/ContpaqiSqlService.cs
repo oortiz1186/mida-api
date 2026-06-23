@@ -8,6 +8,167 @@ namespace SoporteMida.Api.Integrations.Contpaqi.Services;
 public class ContpaqiSqlService
 {
 
+    public async Task<List<ContpaqiDocumentMovementDto>> GetDocumentMovementsAsync(
+    string databaseName,
+    int documentId)
+    {
+        var movements = new List<ContpaqiDocumentMovementDto>();
+
+        var builder = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = databaseName
+        };
+
+        using var connection = new SqlConnection(builder.ConnectionString);
+
+        await connection.OpenAsync();
+
+        const string sql = @"
+        SELECT
+            CIDMOVIMIENTO,
+            CIDDOCUMENTO,
+            CNUMEROMOVIMIENTO,
+            CIDPRODUCTO,
+            CUNIDADES,
+            CPRECIO,
+            CNETO,
+            CIMPUESTO1,
+            CTOTAL,
+            CREFERENCIA,
+            CFECHA
+        FROM admMovimientos
+        WHERE CIDDOCUMENTO = @documentId
+        ORDER BY CNUMEROMOVIMIENTO";
+
+        using var command = new SqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@documentId", documentId);
+
+        using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            movements.Add(new ContpaqiDocumentMovementDto
+            {
+                Id = Convert.ToInt32(reader["CIDMOVIMIENTO"]),
+                DocumentId = Convert.ToInt32(reader["CIDDOCUMENTO"]),
+                NumeroMovimiento = Convert.ToDouble(reader["CNUMEROMOVIMIENTO"]),
+                ProductoId = Convert.ToInt32(reader["CIDPRODUCTO"]),
+                Unidades = Convert.ToDouble(reader["CUNIDADES"]),
+                Precio = Convert.ToDouble(reader["CPRECIO"]),
+                Neto = Convert.ToDouble(reader["CNETO"]),
+                Impuesto1 = Convert.ToDouble(reader["CIMPUESTO1"]),
+                Total = Convert.ToDouble(reader["CTOTAL"]),
+                Referencia = reader["CREFERENCIA"]?.ToString()?.Trim() ?? "",
+                Fecha = Convert.ToDateTime(reader["CFECHA"])
+            });
+        }
+
+        return movements;
+    }
+
+    public async Task<List<ContpaqiDocumentDto>> GetDocumentsAsync(string databaseName)
+    {
+        var documents = new List<ContpaqiDocumentDto>();
+
+        var builder = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = databaseName
+        };
+
+        using var connection = new SqlConnection(builder.ConnectionString);
+
+        await connection.OpenAsync();
+
+        const string sql = @"
+        SELECT TOP (100)
+            CIDDOCUMENTO,
+            CIDCONCEPTODOCUMENTO,
+            CSERIEDOCUMENTO,
+            CFOLIO,
+            CFECHA,
+            CIDCLIENTEPROVEEDOR,
+            CRAZONSOCIAL,
+            CRFC,
+            CNETO,
+            CIMPUESTO1,
+            CTOTAL,
+            CPENDIENTE,
+            CCANCELADO,
+            CREFERENCIA
+        FROM admDocumentos
+        ORDER BY CFECHA DESC, CIDDOCUMENTO DESC";
+
+        using var command = new SqlCommand(sql, connection);
+
+        using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            documents.Add(new ContpaqiDocumentDto
+            {
+                Id = Convert.ToInt32(reader["CIDDOCUMENTO"]),
+                ConceptoId = Convert.ToInt32(reader["CIDCONCEPTODOCUMENTO"]),
+                Serie = reader["CSERIEDOCUMENTO"]?.ToString()?.Trim() ?? "",
+                Folio = Convert.ToDouble(reader["CFOLIO"]),
+                Fecha = Convert.ToDateTime(reader["CFECHA"]),
+                ClienteId = Convert.ToInt32(reader["CIDCLIENTEPROVEEDOR"]),
+                RazonSocial = reader["CRAZONSOCIAL"]?.ToString()?.Trim() ?? "",
+                Rfc = reader["CRFC"]?.ToString()?.Trim() ?? "",
+                Neto = Convert.ToDouble(reader["CNETO"]),
+                Impuesto1 = Convert.ToDouble(reader["CIMPUESTO1"]),
+                Total = Convert.ToDouble(reader["CTOTAL"]),
+                Pendiente = Convert.ToDouble(reader["CPENDIENTE"]),
+                Cancelado = Convert.ToInt32(reader["CCANCELADO"]),
+                Referencia = reader["CREFERENCIA"]?.ToString()?.Trim() ?? ""
+            });
+        }
+
+        return documents;
+    }
+
+    public async Task<List<ContpaqiProductDto>> GetProductsAsync(string databaseName)
+    {
+        var products = new List<ContpaqiProductDto>();
+
+        var builder = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = databaseName
+        };
+
+        using var connection = new SqlConnection(builder.ConnectionString);
+
+        await connection.OpenAsync();
+
+        const string sql = @"
+        SELECT
+            CIDPRODUCTO,
+            CCODIGOPRODUCTO,
+            CNOMBREPRODUCTO,
+            CTIPOPRODUCTO,
+            CSTATUSPRODUCTO
+        FROM admProductos
+        WHERE CIDPRODUCTO > 0
+        ORDER BY CNOMBREPRODUCTO";
+
+        using var command = new SqlCommand(sql, connection);
+
+        using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            products.Add(new ContpaqiProductDto
+            {
+                Id = Convert.ToInt32(reader["CIDPRODUCTO"]),
+                Codigo = reader["CCODIGOPRODUCTO"]?.ToString()?.Trim() ?? "",
+                Nombre = reader["CNOMBREPRODUCTO"]?.ToString()?.Trim() ?? "",
+                TipoProducto = reader["CTIPOPRODUCTO"]?.ToString()?.Trim(),
+                Estatus = Convert.ToInt32(reader["CSTATUSPRODUCTO"])
+            });
+        }
+
+        return products;
+    }
+
     public async Task<List<ContpaqiCustomerDto>> GetCustomersAsync(string databaseName)
     {
         var customers = new List<ContpaqiCustomerDto>();

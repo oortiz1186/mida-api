@@ -73,4 +73,31 @@ public class ContpaqiDiagnosticsController : ControllerBase
 
         return Ok(customers);
     }
+
+    [HttpGet("products/{databaseName}")]
+    public async Task<IActionResult> GetProducts(string databaseName)
+    {
+        var products = await _contpaqiSqlService.GetProductsAsync(databaseName);
+
+        return Ok(products);
+    }
+
+    [HttpGet("documents/{databaseName}")]
+    public async Task<IActionResult> GetDocuments(string databaseName)
+    {
+        var documents = await _contpaqiSqlService.GetDocumentsAsync(databaseName);
+
+        return Ok(documents);
+    }
+
+    [HttpGet("documents/{databaseName}/{documentId}/movements")]
+    public async Task<IActionResult> GetDocumentMovements(
+    string databaseName,
+    int documentId)
+    {
+        var movements = await _contpaqiSqlService
+            .GetDocumentMovementsAsync(databaseName, documentId);
+
+        return Ok(movements);
+    }
 }
