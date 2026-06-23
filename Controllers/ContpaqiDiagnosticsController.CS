@@ -57,4 +57,20 @@ public class ContpaqiDiagnosticsController : ControllerBase
 
         return Ok(columns);
     }
+
+    [HttpGet("companies")]
+    public async Task<IActionResult> GetCompanies()
+    {
+        var companies = await _contpaqiSqlService.GetCompaniesAsync();
+
+        return Ok(companies);
+    }
+
+    [HttpGet("customers/{databaseName}")]
+    public async Task<IActionResult> GetCustomers(string databaseName)
+    {
+        var customers = await _contpaqiSqlService.GetCustomersAsync(databaseName);
+
+        return Ok(customers);
+    }
 }

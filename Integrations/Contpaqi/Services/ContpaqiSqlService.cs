@@ -1,11 +1,113 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using SoporteMida.Api.Config;
+using SoporteMida.Api.Integrations.Contpaqi.Dtos;
 
 namespace SoporteMida.Api.Integrations.Contpaqi.Services;
 
 public class ContpaqiSqlService
 {
+
+    public async Task<List<ContpaqiCustomerDto>> GetCustomersAsync(string databaseName)
+    {
+        var customers = new List<ContpaqiCustomerDto>();
+
+        var builder = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = databaseName
+        };
+
+        using var connection = new SqlConnection(builder.ConnectionString);
+
+        await connection.OpenAsync();
+
+        const string sql = @"
+        SELECT
+            CIDCLIENTEPROVEEDOR,
+            CCODIGOCLIENTE,
+            CRAZONSOCIAL,
+            CRFC,
+            CEMAIL1,
+            CUSOCFDI,
+            CREGIMFISC,
+            CWHATSAPP,
+            CESTATUS
+        FROM admClientes
+        WHERE CIDCLIENTEPROVEEDOR > 0
+        ORDER BY CRAZONSOCIAL";
+
+        using var command = new SqlCommand(sql, connection);
+
+        using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            customers.Add(new ContpaqiCustomerDto
+            {
+                Id = Convert.ToInt32(reader["CIDCLIENTEPROVEEDOR"]),
+                Codigo = reader["CCODIGOCLIENTE"]?.ToString()?.Trim() ?? "",
+                RazonSocial = reader["CRAZONSOCIAL"]?.ToString()?.Trim() ?? "",
+                Rfc = reader["CRFC"]?.ToString()?.Trim(),
+                Email = reader["CEMAIL1"]?.ToString()?.Trim(),
+                UsoCfdi = reader["CUSOCFDI"]?.ToString()?.Trim(),
+                RegimenFiscal = reader["CREGIMFISC"]?.ToString()?.Trim(),
+                Whatsapp = reader["CWHATSAPP"]?.ToString()?.Trim(),
+                Estatus = Convert.ToInt32(reader["CESTATUS"])
+            });
+        }
+
+        return customers;
+    }
+
+    public async Task<List<ContpaqiCompanyDto>> GetCompaniesAsync()
+    {
+        var companies = new List<ContpaqiCompanyDto>();
+
+        var builder = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = "DB_Directory"
+        };
+
+        using var connection = new SqlConnection(builder.ConnectionString);
+
+        await connection.OpenAsync();
+
+        const string sql = @"
+        SELECT
+            idDataBase,
+            GuidCompany,
+            Version,
+            NombreEmpresa,
+            Alias,
+            RFC,
+            CompanyPath,
+            DB_DocumentsMetadata,
+            DB_DocumentsContent
+        FROM DatabaseDirectory
+        ORDER BY NombreEmpresa";
+
+        using var command = new SqlCommand(sql, connection);
+
+        using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            companies.Add(new ContpaqiCompanyDto
+            {
+                IdDatabase = reader.GetInt64(reader.GetOrdinal("idDataBase")),
+                GuidCompany = reader.GetGuid(reader.GetOrdinal("GuidCompany")),
+                Version = reader["Version"] as string,
+                NombreEmpresa = reader["NombreEmpresa"] as string,
+                Alias = reader["Alias"] as string,
+                Rfc = reader["RFC"] as string,
+                CompanyPath = reader["CompanyPath"] as string,
+                DatabaseDocumentsMetadata = reader["DB_DocumentsMetadata"] as string,
+                DatabaseDocumentsContent = reader["DB_DocumentsContent"] as string
+            });
+        }
+
+        return companies;
+    }
     private readonly string _connectionString;
 
     public ContpaqiSqlService(
