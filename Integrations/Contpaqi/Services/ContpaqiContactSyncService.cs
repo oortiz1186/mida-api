@@ -141,9 +141,8 @@ public class ContpaqiContactSyncService
 
         if (contact is null)
         {
-            contact = new Contact
+            var newContact = new Contact
             {
-                Id = Guid.NewGuid(),
                 FullName = fullName,
                 Email = email,
                 Phone = phone,
@@ -156,9 +155,22 @@ public class ContpaqiContactSyncService
 
             await _supabase.Client
                 .From<Contact>()
-                .Insert(contact);
+                .Insert(newContact);
 
-            return contact;
+            var savedContactResponse = await _supabase.Client
+                .From<Contact>()
+                .Where(x => x.ContpaqiDatabase == databaseName)
+                .Where(x => x.ContpaqiCustomerId == contpaqiCustomerId)
+                .Get();
+
+            var savedContact = savedContactResponse.Models.FirstOrDefault();
+
+            if (savedContact is null)
+            {
+                throw new Exception("No se pudo recuperar el contacto después de insertarlo.");
+            }
+
+            return savedContact;
         }
 
         contact.FullName = fullName;

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SoporteMida.Api.Services;
 using Swashbuckle.AspNetCore.Annotations;
+using SoporteMida.Api.Integrations.Contpaqi.Dtos;
 
 namespace SoporteMida.Api.Controllers;
 
@@ -52,6 +53,26 @@ public class SyncController : ControllerBase
     public async Task<IActionResult> SyncAgents(string databaseName)
     {
         var result = await _agentSyncService.SyncAgentsAsync(databaseName);
+
+        return Ok(result);
+    }
+
+    [HttpPost("full/{databaseName}")]
+    [SwaggerOperation(
+    Summary = "Sincronización completa CONTPAQi",
+    Description = "Ejecuta en orden: clientes, contactos y agentes desde CONTPAQi hacia Soporte MIDA."
+)]
+    public async Task<IActionResult> SyncFull(string databaseName)
+    {
+        var result = new FullSyncResultDto
+        {
+            Database = databaseName,
+            ExecutedAt = DateTime.UtcNow
+        };
+
+        result.Customers = await _customerSyncService.SyncCustomersAsync(databaseName);
+        result.Contacts = await _contactSyncService.SyncContactsAsync(databaseName);
+        result.Agents = await _agentSyncService.SyncAgentsAsync(databaseName);
 
         return Ok(result);
     }

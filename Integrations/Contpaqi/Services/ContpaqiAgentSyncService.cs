@@ -42,7 +42,7 @@ public class ContpaqiAgentSyncService
                     {
                         Id = Guid.NewGuid(),
                         Name = agent.Nombre,
-                        Role = "Agente CONTPAQi",
+                        Role = "soporte",
                         Active = true,
                         ContpaqiAgentId = agent.Id,
                         ContpaqiCode = agent.Codigo,
