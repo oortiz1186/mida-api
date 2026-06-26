@@ -1,4 +1,6 @@
 using SoporteMida.Api.Services;
+using Microsoft.Extensions.Options;
+using SoporteMida.Api.Configuration;
 
 namespace SoporteMida.Api.Workers;
 
@@ -6,15 +8,17 @@ public class ContpaqiSyncWorker : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ContpaqiSyncWorker> _logger;
+    private readonly ContpaqiSyncOptions _syncOptions;
     private bool _isRunning = false;
 
     public ContpaqiSyncWorker(
         IServiceProvider serviceProvider,
-        ILogger<ContpaqiSyncWorker> logger)
+        ILogger<ContpaqiSyncWorker> logger,
+        IOptions<ContpaqiSyncOptions> syncOptions)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
-        _logger.LogInformation("********** WORKER CREADO **********");
+        _syncOptions = syncOptions.Value;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -34,7 +38,9 @@ public class ContpaqiSyncWorker : BackgroundService
             if (_isRunning)
             {
                 _logger.LogWarning("La sincronización anterior sigue corriendo. Se omite esta vuelta.");
-                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+                await Task.Delay(
+    TimeSpan.FromMinutes(_syncOptions.IntervalMinutes),
+    stoppingToken);
                 continue;
             }
 
@@ -104,7 +110,13 @@ public class ContpaqiSyncWorker : BackgroundService
                 _isRunning = false;
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+            _logger.LogInformation(
+    "Próxima sincronización en {Minutes} minuto(s)...",
+    _syncOptions.IntervalMinutes);
+
+            await Task.Delay(
+    TimeSpan.FromMinutes(_syncOptions.IntervalMinutes),
+    stoppingToken);
         }
     }
 }
