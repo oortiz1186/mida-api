@@ -61,6 +61,20 @@ public class ContpaqiCustomerSyncService
                 }
                 else
                 {
+                    var hasChanges =
+    company.Name != customer.RazonSocial ||
+    company.Rfc != customer.Rfc ||
+    company.Email != customer.Email ||
+    company.Phone != customer.Whatsapp ||
+    company.Active != (customer.Estatus == 1) ||
+    company.ContpaqiCode != customer.Codigo;
+
+                    if (!hasChanges)
+                    {
+                        result.Skipped++;
+                        continue;
+                    }
+
                     company.Name = customer.RazonSocial;
                     company.Rfc = customer.Rfc;
                     company.Email = customer.Email;

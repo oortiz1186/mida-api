@@ -58,8 +58,20 @@ public class ContpaqiAgentSyncService
                 }
                 else
                 {
+                    var hasChanges =
+    advisor.Name != agent.Nombre ||
+    advisor.Role != "soporte" ||
+    advisor.Active != true ||
+    advisor.ContpaqiCode != agent.Codigo;
+
+                    if (!hasChanges)
+                    {
+                        result.Skipped++;
+                        continue;
+                    }
+
                     advisor.Name = agent.Nombre;
-                    advisor.Role = "Agente CONTPAQi";
+                    advisor.Role = "soporte";
                     advisor.Active = true;
                     advisor.ContpaqiCode = agent.Codigo;
                     advisor.LastSyncedAt = DateTime.UtcNow;

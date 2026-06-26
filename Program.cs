@@ -1,6 +1,7 @@
 using SoporteMida.Api.Config;
 using SoporteMida.Api.Services;
 using SoporteMida.Api.Integrations.Contpaqi.Services;
+using SoporteMida.Api.Workers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,7 @@ builder.Services.AddScoped<ContpaqiSqlService>();
 builder.Services.AddScoped<ContpaqiCustomerSyncService>();
 builder.Services.AddScoped<ContpaqiContactSyncService>();
 builder.Services.AddScoped<ContpaqiAgentSyncService>();
+builder.Services.AddHostedService<ContpaqiSyncWorker>();
 
 
 builder.Services.AddSingleton<SupabaseClientService>();
