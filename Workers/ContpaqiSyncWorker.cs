@@ -34,7 +34,7 @@ public class ContpaqiSyncWorker : BackgroundService
             if (_isRunning)
             {
                 _logger.LogWarning("La sincronización anterior sigue corriendo. Se omite esta vuelta.");
-                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
                 continue;
             }
 
@@ -104,7 +104,7 @@ public class ContpaqiSyncWorker : BackgroundService
                 _isRunning = false;
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
         }
     }
 }
