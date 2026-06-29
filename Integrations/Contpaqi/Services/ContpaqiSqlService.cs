@@ -226,21 +226,37 @@ public class ContpaqiSqlService
         await connection.OpenAsync();
 
         const string sql = @"
-    SELECT
-        CIDCLIENTEPROVEEDOR,
-        CCODIGOCLIENTE,
-        CRAZONSOCIAL,
-        CRFC,
-        CEMAIL1,
-        CEMAIL2,
-        CEMAIL3,
-        CUSOCFDI,
-        CREGIMFISC,
-        CWHATSAPP,
-        CESTATUS
-    FROM admClientes
-    WHERE CIDCLIENTEPROVEEDOR > 0
-    ORDER BY CRAZONSOCIAL";
+SELECT
+    c.CIDCLIENTEPROVEEDOR,
+    c.CCODIGOCLIENTE,
+    c.CRAZONSOCIAL,
+    c.CRFC,
+    COALESCE(NULLIF(c.CEMAIL1, ''), NULLIF(d.CEMAIL, '')) AS CEMAIL1,
+    c.CEMAIL2,
+    c.CEMAIL3,
+    c.CUSOCFDI,
+    c.CREGIMFISC,
+    COALESCE(NULLIF(c.CWHATSAPP, ''), NULLIF(d.CTELEFONO1, ''), NULLIF(d.CTELEFONO2, '')) AS CWHATSAPP,
+    c.CESTATUS
+FROM admClientes c
+OUTER APPLY (
+    SELECT TOP 1
+        CEMAIL,
+        CTELEFONO1,
+        CTELEFONO2
+    FROM admDomicilios d
+    WHERE d.CIDCATALOGO = c.CIDCLIENTEPROVEEDOR
+      AND d.CTIPOCATALOGO = 1
+    ORDER BY
+        CASE
+            WHEN d.CSUCURSAL = 'Matriz' THEN 0
+            WHEN d.CTIPODIRECCION = 0 THEN 1
+            ELSE 2
+        END,
+        d.CIDDIRECCION
+) d
+WHERE c.CIDCLIENTEPROVEEDOR > 0
+ORDER BY c.CRAZONSOCIAL";
 
         using var command = new SqlCommand(sql, connection);
 
@@ -504,6 +520,183 @@ public class ContpaqiSqlService
         }
 
         return tables;
+    }
+    public async Task<List<object>> SearchValueInDatabaseAsync(
+    string databaseName,
+    string term)
+    {
+        var results = new List<object>();
+
+        var builder = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = databaseName
+        };
+
+        using var connection = new SqlConnection(builder.ConnectionString);
+        await connection.OpenAsync();
+
+        const string columnsSql = @"
+        SELECT
+            TABLE_NAME,
+            COLUMN_NAME,
+            DATA_TYPE
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE DATA_TYPE IN ('varchar', 'nvarchar', 'char', 'nchar', 'text', 'ntext')
+        ORDER BY TABLE_NAME, ORDINAL_POSITION";
+
+        using var columnsCommand = new SqlCommand(columnsSql, connection);
+        using var reader = await columnsCommand.ExecuteReaderAsync();
+
+        var columns = new List<(string TableName, string ColumnName)>();
+
+        while (await reader.ReadAsync())
+        {
+            columns.Add((
+                reader["TABLE_NAME"]?.ToString() ?? "",
+                reader["COLUMN_NAME"]?.ToString() ?? ""
+            ));
+        }
+
+        await reader.CloseAsync();
+
+        foreach (var group in columns.GroupBy(x => x.TableName))
+        {
+            var tableName = group.Key;
+
+            foreach (var column in group)
+            {
+                try
+                {
+                    var sql = $@"
+                    SELECT TOP 20 *
+                    FROM [{tableName}]
+                    WHERE [{column.ColumnName}] LIKE @term";
+
+                    using var command = new SqlCommand(sql, connection);
+                    command.CommandTimeout = 10;
+                    command.Parameters.AddWithValue("@term", $"%{term}%");
+
+                    using var dataReader = await command.ExecuteReaderAsync();
+
+                    while (await dataReader.ReadAsync())
+                    {
+                        var row = new Dictionary<string, object?>();
+
+                        for (int i = 0; i < dataReader.FieldCount; i++)
+                        {
+                            row[dataReader.GetName(i)] =
+                                await dataReader.IsDBNullAsync(i)
+                                    ? null
+                                    : dataReader.GetValue(i);
+                        }
+
+                        results.Add(new
+                        {
+                            TableName = tableName,
+                            ColumnName = column.ColumnName,
+                            Row = row
+                        });
+                    }
+
+                    await dataReader.CloseAsync();
+                }
+                catch
+                {
+                    // Ignorar tablas/columnas que no se puedan leer.
+                }
+            }
+        }
+
+        return results;
+    }
+
+    public async Task<List<object>> SearchNumberInDatabaseAsync(
+    string databaseName,
+    long value)
+    {
+        var results = new List<object>();
+
+        var builder = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = databaseName
+        };
+
+        using var connection = new SqlConnection(builder.ConnectionString);
+        await connection.OpenAsync();
+
+        const string columnsSql = @"
+        SELECT
+            TABLE_NAME,
+            COLUMN_NAME,
+            DATA_TYPE
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE DATA_TYPE IN (
+            'int',
+            'bigint',
+            'smallint',
+            'tinyint',
+            'numeric',
+            'decimal',
+            'float',
+            'real'
+        )
+        ORDER BY TABLE_NAME, ORDINAL_POSITION";
+
+        using var columnsCommand = new SqlCommand(columnsSql, connection);
+        using var reader = await columnsCommand.ExecuteReaderAsync();
+
+        var columns = new List<(string TableName, string ColumnName, string DataType)>();
+
+        while (await reader.ReadAsync())
+        {
+            columns.Add((
+                reader["TABLE_NAME"]?.ToString() ?? "",
+                reader["COLUMN_NAME"]?.ToString() ?? "",
+                reader["DATA_TYPE"]?.ToString() ?? ""
+            ));
+        }
+
+        await reader.CloseAsync();
+
+        foreach (var column in columns)
+        {
+            try
+            {
+                var sql = $@"
+                SELECT COUNT(1)
+                FROM [{column.TableName}]
+                WHERE [{column.ColumnName}] = @value";
+
+                using var command = new SqlCommand(sql, connection);
+                command.CommandTimeout = 10;
+                command.Parameters.AddWithValue("@value", value);
+
+                var count = Convert.ToInt32(await command.ExecuteScalarAsync());
+
+                if (count > 0)
+                {
+                    results.Add(new
+                    {
+                        TableName = column.TableName,
+                        ColumnName = column.ColumnName,
+                        DataType = column.DataType,
+                        Matches = count
+                    });
+                }
+            }
+            catch
+            {
+                // Ignorar columnas/tablas que no se puedan consultar.
+            }
+        }
+
+        return results
+            .OrderByDescending(x =>
+                Convert.ToInt32(
+                    x.GetType().GetProperty("Matches")!.GetValue(x)
+                )
+            )
+            .ToList();
     }
 }
 

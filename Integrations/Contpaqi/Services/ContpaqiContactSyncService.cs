@@ -68,23 +68,33 @@ public class ContpaqiContactSyncService
                 }
 
                 var primaryName = string.IsNullOrWhiteSpace(customer.RazonSocial)
-                    ? customer.Codigo
-                    : customer.RazonSocial;
+    ? customer.Codigo
+    : customer.RazonSocial;
+
+                var emails = SplitEmails(customer.Email)
+                    .Concat(SplitEmails(customer.Email2))
+                    .Concat(SplitEmails(customer.Email3))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var primaryEmail = emails.ElementAtOrDefault(0);
+                var email2 = emails.ElementAtOrDefault(1);
+                var email3 = emails.ElementAtOrDefault(2);
 
                 var contact = await CreateOrUpdateContactAsync(
-    result,
-    contactsByEmail,
-    contactsByContpaqi,
-    databaseName,
-    customer.Id,
-    primaryName,
-    customer.Email,
-    customer.Whatsapp,
-    customer.Estatus == 1,
-    customer.Email,
-    customer.Email2,
-    customer.Email3
-);
+                    result,
+                    contactsByEmail,
+                    contactsByContpaqi,
+                    databaseName,
+                    customer.Id,
+                    primaryName,
+                    primaryEmail,
+                    customer.Whatsapp,
+                    customer.Estatus == 1,
+                    primaryEmail,
+                    email2,
+                    email3
+                );
 
                 await CreateOrUpdateRelationAsync(
                     result,
@@ -127,16 +137,14 @@ public class ContpaqiContactSyncService
 
         var normalizedEmail = Normalize(email);
 
-        if (contpaqiCustomerId.HasValue)
-        {
-            contactsByContpaqi.TryGetValue(contpaqiCustomerId.Value, out contact);
-        }
-
-
-
-        if (contact is null && !string.IsNullOrWhiteSpace(normalizedEmail))
+        if (!string.IsNullOrWhiteSpace(normalizedEmail))
         {
             contactsByEmail.TryGetValue(normalizedEmail, out contact);
+        }
+
+        if (contact is null && contpaqiCustomerId.HasValue)
+        {
+            contactsByContpaqi.TryGetValue(contpaqiCustomerId.Value, out contact);
         }
         if (contact is not null && contpaqiCustomerId.HasValue)
         {
@@ -257,9 +265,7 @@ public class ContpaqiContactSyncService
     contact.Email2 != email2 ||
     contact.Email3 != email3 ||
     contact.Phone != newPhone ||
-    contact.Active != active ||
-    contact.ContpaqiCustomerId != contpaqiCustomerId ||
-    contact.ContpaqiDatabase != databaseName;
+    contact.Active != active;
 
         if (!hasChanges)
         {
@@ -274,8 +280,8 @@ public class ContpaqiContactSyncService
         contact.Email3 = email3;
         contact.Phone = newPhone;
         contact.Active = active;
-        contact.ContpaqiCustomerId = contpaqiCustomerId;
-        contact.ContpaqiDatabase = databaseName;
+        //contact.ContpaqiCustomerId = contpaqiCustomerId;
+        //contact.ContpaqiDatabase = databaseName;
         contact.LastSyncedAt = DateTime.UtcNow;
         contact.UpdatedAt = DateTime.UtcNow;
 
