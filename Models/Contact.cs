@@ -14,6 +14,14 @@ public class Contact : BaseModel
 
     [Column("email")]
     public string? Email { get; set; }
+    [Column("email_1")]
+    public string? Email1 { get; set; }
+
+    [Column("email_2")]
+    public string? Email2 { get; set; }
+
+    [Column("email_3")]
+    public string? Email3 { get; set; }
 
     [Column("phone")]
     public string? Phone { get; set; }

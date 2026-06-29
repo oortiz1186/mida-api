@@ -71,71 +71,28 @@ public class ContpaqiContactSyncService
                     ? customer.Codigo
                     : customer.RazonSocial;
 
-                var primaryContact = await CreateOrUpdateContactAsync(
-                    result,
-                    contactsByEmail,
-                    contactsByContpaqi,
-                    databaseName,
-                    customer.Id,
-                    primaryName,
-                    customer.Email,
-                    customer.Whatsapp,
-                    customer.Estatus == 1
-                );
+                var contact = await CreateOrUpdateContactAsync(
+    result,
+    contactsByEmail,
+    contactsByContpaqi,
+    databaseName,
+    customer.Id,
+    primaryName,
+    customer.Email,
+    customer.Whatsapp,
+    customer.Estatus == 1,
+    customer.Email,
+    customer.Email2,
+    customer.Email3
+);
 
                 await CreateOrUpdateRelationAsync(
                     result,
                     relationsByContactCompany,
-                    primaryContact.Id,
+                    contact.Id,
                     company.Id,
                     true
                 );
-
-                if (!string.IsNullOrWhiteSpace(customer.Email2))
-                {
-                    var contact2 = await CreateOrUpdateContactAsync(
-                        result,
-                        contactsByEmail,
-                        contactsByContpaqi,
-                        databaseName,
-                        null,
-$"Contacto 2 - {primaryName}",
-customer.Email2,
-null,
-customer.Estatus == 1
-                    );
-
-                    await CreateOrUpdateRelationAsync(
-                        result,
-                        relationsByContactCompany,
-                        contact2.Id,
-                        company.Id,
-                        false
-                    );
-                }
-
-                if (!string.IsNullOrWhiteSpace(customer.Email3))
-                {
-                    var contact3 = await CreateOrUpdateContactAsync(
-                        result,
-                        contactsByEmail,
-                        contactsByContpaqi,
-                        databaseName,
-                        null,
-$"Contacto 3 - {primaryName}",
-customer.Email3,
-null,
-customer.Estatus == 1
-                    );
-
-                    await CreateOrUpdateRelationAsync(
-                        result,
-                        relationsByContactCompany,
-                        contact3.Id,
-                        company.Id,
-                        false
-                    );
-                }
             }
             catch (Exception ex)
             {
@@ -161,7 +118,10 @@ customer.Estatus == 1
     string fullName,
     string? email,
     string? phone,
-    bool active)
+    bool active,
+    string? email1,
+    string? email2,
+    string? email3)
     {
         Contact? contact = null;
 
@@ -229,6 +189,9 @@ customer.Estatus == 1
                 Id = Guid.NewGuid(),
                 FullName = fullName,
                 Email = email,
+                Email1 = email1,
+                Email2 = email2,
+                Email3 = email3,
                 Phone = phone,
                 Active = active,
                 ContpaqiCustomerId = contpaqiCustomerId,
@@ -290,6 +253,9 @@ customer.Estatus == 1
         var hasChanges =
     contact.FullName != fullName ||
     contact.Email != newEmail ||
+    contact.Email1 != email1 ||
+    contact.Email2 != email2 ||
+    contact.Email3 != email3 ||
     contact.Phone != newPhone ||
     contact.Active != active ||
     contact.ContpaqiCustomerId != contpaqiCustomerId ||
@@ -303,6 +269,9 @@ customer.Estatus == 1
 
         contact.FullName = fullName;
         contact.Email = newEmail;
+        contact.Email1 = email1;
+        contact.Email2 = email2;
+        contact.Email3 = email3;
         contact.Phone = newPhone;
         contact.Active = active;
         contact.ContpaqiCustomerId = contpaqiCustomerId;
@@ -434,5 +403,20 @@ customer.Estatus == 1
         return string.IsNullOrWhiteSpace(value)
             ? string.Empty
             : value.Trim().ToLowerInvariant();
+    }
+
+    private static List<string> SplitEmails(string? emails)
+    {
+        if (string.IsNullOrWhiteSpace(emails))
+        {
+            return new List<string>();
+        }
+
+        return emails
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }
