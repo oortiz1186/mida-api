@@ -29,4 +29,13 @@ public class Advisor : BaseModel
 
     [Column("last_synced_at")]
     public DateTime? LastSyncedAt { get; set; }
+    [Column("sync_source")]
+    public string? SyncSource { get; set; }
+
+    [Column("sync_status")]
+    public string? SyncStatus { get; set; }
+
+    [Column("sync_error")]
+    public string? SyncError { get; set; }
+    
 }

@@ -91,7 +91,7 @@ public class ContpaqiContactSyncService
                     customer.Id,
                     primaryName,
                     primaryEmail,
-                    customer.Whatsapp,
+                    NormalizePhone(customer.Whatsapp),
                     customer.Estatus == 1,
                     primaryEmail,
                     email2,
@@ -137,7 +137,7 @@ public class ContpaqiContactSyncService
 
                     if (company is null)
                     {
-                        
+
                         result.Skipped++;
                         continue;
                     }
@@ -149,10 +149,12 @@ public class ContpaqiContactSyncService
                     ? $"Contacto CONTPAQi {additional.Id}"
                     : additional.Nombre;
 
-                var phone = !string.IsNullOrWhiteSpace(additional.Telefono1)
-                    ? additional.Telefono1
-                    : additional.Telefono2;
-        
+                var phone = NormalizePhone(
+    !string.IsNullOrWhiteSpace(additional.Telefono1)
+        ? additional.Telefono1
+        : additional.Telefono2
+);
+
                 var contact = await CreateOrUpdateAdditionalContactAsync(
      result,
      databaseName,
@@ -373,7 +375,7 @@ public class ContpaqiContactSyncService
     string? phone,
     bool active)
     {
-        
+
         var existingResponse = await _supabase.Client
             .From<Contact>()
             .Where(x => x.ContpaqiDatabase == databaseName)
@@ -384,7 +386,7 @@ public class ContpaqiContactSyncService
 
         if (contact is null)
         {
-            
+
 
             contact = new Contact
             {
@@ -576,5 +578,14 @@ public class ContpaqiContactSyncService
             .Select(x => x.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+    private static string? NormalizePhone(string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone))
+        {
+            return null;
+        }
+
+        return new string(phone.Where(char.IsDigit).ToArray());
     }
 }

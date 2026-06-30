@@ -44,7 +44,7 @@ public class ContpaqiCustomerSyncService
                         Name = customer.RazonSocial,
                         Rfc = customer.Rfc,
                         Email = customer.Email,
-                        Phone = customer.Whatsapp,
+                        Phone = NormalizePhone(customer.Whatsapp),
                         Active = customer.Estatus == 1,
                         ContpaqiCustomerId = customer.Id,
                         ContpaqiCode = customer.Codigo,
@@ -65,7 +65,7 @@ public class ContpaqiCustomerSyncService
     company.Name != customer.RazonSocial ||
     company.Rfc != customer.Rfc ||
     company.Email != customer.Email ||
-    company.Phone != customer.Whatsapp ||
+    company.Phone != NormalizePhone(customer.Whatsapp) ||
     company.Active != (customer.Estatus == 1) ||
     company.ContpaqiCode != customer.Codigo;
 
@@ -78,7 +78,7 @@ public class ContpaqiCustomerSyncService
                     company.Name = customer.RazonSocial;
                     company.Rfc = customer.Rfc;
                     company.Email = customer.Email;
-                    company.Phone = customer.Whatsapp;
+                    company.Phone = NormalizePhone(customer.Whatsapp);
                     company.Active = customer.Estatus == 1;
                     company.ContpaqiCode = customer.Codigo;
                     company.LastSyncedAt = DateTime.UtcNow;
@@ -96,5 +96,14 @@ public class ContpaqiCustomerSyncService
         }
 
         return result;
+    }
+    private static string? NormalizePhone(string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone))
+        {
+            return null;
+        }
+
+        return new string(phone.Where(char.IsDigit).ToArray());
     }
 }

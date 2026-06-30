@@ -43,4 +43,12 @@ public class Contact : BaseModel
 
     [Column("contpaqi_address_id")]
     public int? ContpaqiAddressId { get; set; }
+    [Column("sync_source")]
+    public string? SyncSource { get; set; }
+
+    [Column("sync_status")]
+    public string? SyncStatus { get; set; }
+
+    [Column("sync_error")]
+    public string? SyncError { get; set; }
 }
