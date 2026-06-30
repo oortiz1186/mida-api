@@ -40,4 +40,7 @@ public class Contact : BaseModel
 
     [Column("updated_at")]
     public DateTime? UpdatedAt { get; set; }
+
+    [Column("contpaqi_address_id")]
+    public int? ContpaqiAddressId { get; set; }
 }

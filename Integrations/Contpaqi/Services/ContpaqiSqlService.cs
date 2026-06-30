@@ -610,6 +610,51 @@ ORDER BY c.CRAZONSOCIAL";
         return results;
     }
 
+    public async Task<List<ContpaqiAdditionalContactDto>> GetAdditionalContactsAsync(string databaseName)
+    {
+        var contacts = new List<ContpaqiAdditionalContactDto>();
+
+        var builder = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = databaseName
+        };
+
+        using var connection = new SqlConnection(builder.ConnectionString);
+        await connection.OpenAsync();
+
+        const string sql = @"
+        SELECT
+            CIDDIRECCION,
+            CIDCATALOGO,
+            CNOMBRECALLE,
+            CEMAIL,
+            CTELEFONO1,
+            CTELEFONO2
+        FROM admDomicilios
+        WHERE CTIPOCATALOGO = 6
+          AND CIDCATALOGO > 0
+        ORDER BY CIDCATALOGO, CIDDIRECCION";
+
+        using var command = new SqlCommand(sql, connection);
+        using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            contacts.Add(new ContpaqiAdditionalContactDto
+            {
+                Id = Convert.ToInt32(reader["CIDDIRECCION"]),
+                CustomerId = Convert.ToInt32(reader["CIDCATALOGO"]),
+                Nombre = reader["CNOMBRECALLE"]?.ToString()?.Trim(),
+                Email = reader["CEMAIL"]?.ToString()?.Trim(),
+                Telefono1 = reader["CTELEFONO1"]?.ToString()?.Trim(),
+                Telefono2 = reader["CTELEFONO2"]?.ToString()?.Trim(),
+                Active = true
+            });
+        }
+
+        return contacts;
+    }
+
     public async Task<List<object>> SearchNumberInDatabaseAsync(
     string databaseName,
     long value)

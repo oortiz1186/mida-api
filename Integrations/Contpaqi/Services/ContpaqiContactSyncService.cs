@@ -25,17 +25,18 @@ public class ContpaqiContactSyncService
         result.TotalRead = customers.Count;
 
         var companiesResponse = await _supabase.Client
-            .From<TicketCompany>()
-            .Where(x => x.ContpaqiDatabase == databaseName)
-            .Get();
-
+    .From<TicketCompany>()
+    .Range(0, 5000)
+    .Get();
         var companiesByCustomerId = companiesResponse.Models
-            .Where(x => x.ContpaqiCustomerId.HasValue)
-            .ToDictionary(x => x.ContpaqiCustomerId!.Value, x => x);
+    .Where(x => x.ContpaqiCustomerId.HasValue)
+    .GroupBy(x => x.ContpaqiCustomerId!.Value)
+    .ToDictionary(x => x.Key, x => x.First());
 
         var contactsResponse = await _supabase.Client
-            .From<Contact>()
-            .Get();
+    .From<Contact>()
+    .Range(0, 5000)
+    .Get();
 
         var contactsByEmail = contactsResponse.Models
             .Where(x => !string.IsNullOrWhiteSpace(x.Email))
@@ -50,8 +51,9 @@ public class ContpaqiContactSyncService
             .ToDictionary(x => x.Key, x => x.First());
 
         var relationsResponse = await _supabase.Client
-            .From<ContactCompany>()
-            .Get();
+    .From<ContactCompany>()
+    .Range(0, 5000)
+    .Get();
 
         var relationsByContactCompany = relationsResponse.Models
             .GroupBy(x => $"{x.ContactId}-{x.CompanyId}")
@@ -113,6 +115,66 @@ public class ContpaqiContactSyncService
                 }
 
                 result.Errors.Add($"{customer.Codigo} - {customer.RazonSocial}: {ex.Message}");
+            }
+        }
+
+        var additionalContacts = await _contpaqiSqlService.GetAdditionalContactsAsync(databaseName);
+        result.TotalRead += additionalContacts.Count;
+
+        foreach (var additional in additionalContacts)
+        {
+            try
+            {
+
+                if (!companiesByCustomerId.TryGetValue(additional.CustomerId, out var company))
+                {
+                    var companyResponse = await _supabase.Client
+                        .From<TicketCompany>()
+                        .Where(x => x.ContpaqiCustomerId == additional.CustomerId)
+                        .Get();
+
+                    company = companyResponse.Models.FirstOrDefault();
+
+                    if (company is null)
+                    {
+                        
+                        result.Skipped++;
+                        continue;
+                    }
+
+                    companiesByCustomerId[additional.CustomerId] = company;
+                }
+
+                var name = string.IsNullOrWhiteSpace(additional.Nombre)
+                    ? $"Contacto CONTPAQi {additional.Id}"
+                    : additional.Nombre;
+
+                var phone = !string.IsNullOrWhiteSpace(additional.Telefono1)
+                    ? additional.Telefono1
+                    : additional.Telefono2;
+        
+                var contact = await CreateOrUpdateAdditionalContactAsync(
+     result,
+     databaseName,
+     additional.CustomerId,
+     additional.Id,
+     name,
+     additional.Email,
+     phone,
+     additional.Active
+ );
+
+                await CreateOrUpdateRelationAsync(
+                    result,
+                    relationsByContactCompany,
+                    contact.Id,
+                    company.Id,
+                    false
+                );
+            }
+            catch (Exception ex)
+            {
+                result.Errors.Add($"Contacto adicional {additional.Id}: {ex.Message}");
             }
         }
 
@@ -298,6 +360,96 @@ public class ContpaqiContactSyncService
         }
         result.Updated++;
 
+        return contact;
+    }
+
+    private async Task<Contact> CreateOrUpdateAdditionalContactAsync(
+    SyncResultDto result,
+    string databaseName,
+    int contpaqiCustomerId,
+    int contpaqiAddressId,
+    string fullName,
+    string? email,
+    string? phone,
+    bool active)
+    {
+        
+        var existingResponse = await _supabase.Client
+            .From<Contact>()
+            .Where(x => x.ContpaqiDatabase == databaseName)
+            .Where(x => x.ContpaqiAddressId == contpaqiAddressId)
+            .Get();
+
+        var contact = existingResponse.Models.FirstOrDefault();
+
+        if (contact is null)
+        {
+            
+
+            contact = new Contact
+            {
+                Id = Guid.NewGuid(),
+                FullName = fullName,
+                Email = email,
+                Email1 = email,
+                Phone = phone,
+                Active = active,
+                ContpaqiCustomerId = contpaqiCustomerId,
+                ContpaqiAddressId = contpaqiAddressId,
+                ContpaqiDatabase = databaseName,
+                LastSyncedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _supabase.Client
+    .From<Contact>()
+    .Insert(contact);
+
+            var savedResponse = await _supabase.Client
+                .From<Contact>()
+                .Where(x => x.ContpaqiDatabase == databaseName)
+                .Where(x => x.ContpaqiAddressId == contpaqiAddressId)
+                .Get();
+
+            var savedContact = savedResponse.Models.FirstOrDefault();
+
+            if (savedContact is null)
+            {
+                throw new Exception($"No se pudo recuperar contacto adicional {contpaqiAddressId} después de insertarlo.");
+            }
+
+            result.Created++;
+            return savedContact;
+        }
+
+        var hasChanges =
+            contact.FullName != fullName ||
+            contact.Email != email ||
+            contact.Email1 != email ||
+            contact.Phone != phone ||
+            contact.Active != active ||
+            contact.ContpaqiCustomerId != contpaqiCustomerId;
+
+        if (!hasChanges)
+        {
+            result.Skipped++;
+            return contact;
+        }
+
+        contact.FullName = fullName;
+        contact.Email = email;
+        contact.Email1 = email;
+        contact.Phone = phone;
+        contact.Active = active;
+        contact.ContpaqiCustomerId = contpaqiCustomerId;
+        contact.ContpaqiAddressId = contpaqiAddressId;
+        contact.ContpaqiDatabase = databaseName;
+        contact.LastSyncedAt = DateTime.UtcNow;
+        contact.UpdatedAt = DateTime.UtcNow;
+
+        await contact.Update<Contact>();
+
+        result.Updated++;
         return contact;
     }
 
