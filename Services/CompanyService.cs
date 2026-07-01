@@ -1,6 +1,7 @@
 using SoporteMida.Api.Dtos;
 using SoporteMida.Api.Models;
 using SoporteMida.Api.Controllers;
+using SoporteMida.Api.Services.Sync;
 
 namespace SoporteMida.Api.Services;
 
@@ -16,18 +17,18 @@ public class CompanyService
     public async Task<IEnumerable<CompanyDto>> GetCompaniesAsync()
     {
         var response = await _supabase.Client
-            .From<Company>()
-            .Range(0, 5000)
-            .Get();
+    .From<TicketCompany>()
+    .Range(0, 5000)
+    .Get();
 
         return response.Models.Select(company => new CompanyDto
         {
-            Id = company.Id,
+            Id = company.Id.ToString(),
             Name = company.Name,
             Rfc = company.Rfc,
             Phone = company.Phone,
             Email = company.Email,
-            CreatedAt = company.CreatedAt
+            CreatedAt = company.UpdatedAt
         });
     }
 
@@ -51,10 +52,7 @@ public class CompanyService
         company.Phone = request.Phone;
         company.Active = request.Active;
 
-        company.SyncSource = "mida";
-        company.SyncStatus = "pending";
-        company.SyncError = null;
-        company.UpdatedAt = DateTime.UtcNow;
+        SyncMetadataService.MarkAsPendingFromMida(company);
 
         await company.Update<TicketCompany>();
 

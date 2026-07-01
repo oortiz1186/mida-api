@@ -743,5 +743,48 @@ ORDER BY c.CRAZONSOCIAL";
             )
             .ToList();
     }
+    public async Task UpdateCustomerFromMidaAsync(
+    string databaseName,
+    int customerId,
+    string name,
+    string? rfc,
+    string? email,
+    string? phone,
+    bool active)
+    {
+        var builder = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = databaseName
+        };
+
+        using var connection = new SqlConnection(builder.ConnectionString);
+        await connection.OpenAsync();
+
+        const string sql = @"
+        UPDATE admClientes
+        SET
+            CRAZONSOCIAL = @name,
+            CRFC = @rfc,
+            CEMAIL1 = @email,
+            CWHATSAPP = @phone,
+            CESTATUS = @status
+        WHERE CIDCLIENTEPROVEEDOR = @customerId";
+
+        using var command = new SqlCommand(sql, connection);
+
+        command.Parameters.AddWithValue("@name", name);
+        command.Parameters.AddWithValue("@rfc", string.IsNullOrWhiteSpace(rfc) ? DBNull.Value : rfc);
+        command.Parameters.AddWithValue("@email", string.IsNullOrWhiteSpace(email) ? DBNull.Value : email);
+        command.Parameters.AddWithValue("@phone", string.IsNullOrWhiteSpace(phone) ? DBNull.Value : phone);
+        command.Parameters.AddWithValue("@status", active ? 1 : 0);
+        command.Parameters.AddWithValue("@customerId", customerId);
+
+        var affected = await command.ExecuteNonQueryAsync();
+
+        if (affected == 0)
+        {
+            throw new Exception($"No se encontró cliente CONTPAQi con ID {customerId}.");
+        }
+    }
 }
 

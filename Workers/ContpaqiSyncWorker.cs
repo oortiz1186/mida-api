@@ -1,6 +1,7 @@
 using SoporteMida.Api.Services;
 using Microsoft.Extensions.Options;
 using SoporteMida.Api.Configuration;
+using SoporteMida.Api.Integrations.Contpaqi.Services;
 
 namespace SoporteMida.Api.Workers;
 
@@ -53,6 +54,8 @@ public class ContpaqiSyncWorker : BackgroundService
                 var customerSync = scope.ServiceProvider.GetRequiredService<ContpaqiCustomerSyncService>();
                 var contactSync = scope.ServiceProvider.GetRequiredService<ContpaqiContactSyncService>();
                 var agentSync = scope.ServiceProvider.GetRequiredService<ContpaqiAgentSyncService>();
+                var reverseSync = scope.ServiceProvider.GetRequiredService<ContpaqiReverseSyncService>();
+
 
                 // Cambia aquí el nombre de la BD real de CONTPAQi
                 var databaseName = "adMIDA_PRUEBAS";
@@ -90,14 +93,36 @@ public class ContpaqiSyncWorker : BackgroundService
                 }
 
                 var agentsResult = await agentSync.SyncAgentsAsync(databaseName);
+
                 _logger.LogInformation(
-    "Asesores sincronizados. Leídos: {Total}, Creados: {Created}, Actualizados: {Updated}, Omitidos: {Skipped}, Errores: {Errors}",
-    agentsResult.TotalRead,
-    agentsResult.Created,
-    agentsResult.Updated,
-    agentsResult.Skipped,
-    agentsResult.Errors.Count
-);
+                    "Asesores sincronizados. Leídas: {Total}, Creadas: {Created}, Actualizadas: {Updated}, Omitidos: {Skipped}, Errores: {Errors}",
+                    agentsResult.TotalRead,
+                    agentsResult.Created,
+                    agentsResult.Updated,
+                    agentsResult.Skipped,
+                    agentsResult.Errors.Count
+                );
+                var reverseResult = await reverseSync.SyncCompaniesToContpaqiAsync();
+
+                _logger.LogInformation(
+                    "Reverse Sync empresas MIDA -> CONTPAQi. Leídas: {Total}, Actualizadas: {Updated}, Omitidas: {Skipped}, Errores: {Errors}",
+                    reverseResult.TotalRead,
+                    reverseResult.Updated,
+                    reverseResult.Skipped,
+                    reverseResult.Errors.Count
+                );
+
+                if (reverseResult.Errors.Any())
+                {
+                    _logger.LogWarning("Errores en Reverse Sync:");
+
+                    foreach (var error in reverseResult.Errors.Take(20))
+                    {
+                        _logger.LogWarning(error);
+                    }
+                }
+
+                
 
                 _logger.LogInformation("Sincronización CONTPAQi finalizada correctamente.");
             }

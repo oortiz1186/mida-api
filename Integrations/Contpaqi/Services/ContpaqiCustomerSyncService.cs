@@ -1,6 +1,7 @@
 using SoporteMida.Api.Integrations.Contpaqi.Dtos;
 using SoporteMida.Api.Integrations.Contpaqi.Services;
 using SoporteMida.Api.Models;
+using SoporteMida.Api.Services.Sync;
 
 namespace SoporteMida.Api.Services;
 
@@ -49,6 +50,12 @@ public class ContpaqiCustomerSyncService
                         ContpaqiCustomerId = customer.Id,
                         ContpaqiCode = customer.Codigo,
                         ContpaqiDatabase = databaseName,
+
+                        SyncSource = "contpaqi",
+                        SyncStatus = "synced",
+                        SyncError = null,
+                        LastRemoteChangeAt = DateTime.UtcNow,
+
                         LastSyncedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     };
@@ -61,13 +68,19 @@ public class ContpaqiCustomerSyncService
                 }
                 else
                 {
+                    if (SyncConflictResolver.ShouldSkipContpaqiUpdate(company))
+                    {
+                        result.Skipped++;
+                        continue;
+                    }
+
                     var hasChanges =
-    company.Name != customer.RazonSocial ||
-    company.Rfc != customer.Rfc ||
-    company.Email != customer.Email ||
-    company.Phone != NormalizePhone(customer.Whatsapp) ||
-    company.Active != (customer.Estatus == 1) ||
-    company.ContpaqiCode != customer.Codigo;
+                        company.Name != customer.RazonSocial ||
+                        company.Rfc != customer.Rfc ||
+                        company.Email != customer.Email ||
+                        company.Phone != NormalizePhone(customer.Whatsapp) ||
+                        company.Active != (customer.Estatus == 1) ||
+                        company.ContpaqiCode != customer.Codigo;
 
                     if (!hasChanges)
                     {
@@ -75,15 +88,16 @@ public class ContpaqiCustomerSyncService
                         continue;
                     }
 
+                   SyncMetadataService.MarkAsSyncedFromContpaqi(company);
+
                     company.Name = customer.RazonSocial;
                     company.Rfc = customer.Rfc;
                     company.Email = customer.Email;
                     company.Phone = NormalizePhone(customer.Whatsapp);
                     company.Active = customer.Estatus == 1;
                     company.ContpaqiCode = customer.Codigo;
-                    company.LastSyncedAt = DateTime.UtcNow;
-                    company.UpdatedAt = DateTime.UtcNow;
 
+                    
                     await company.Update<TicketCompany>();
 
                     result.Updated++;

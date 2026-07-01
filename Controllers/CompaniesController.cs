@@ -37,7 +37,19 @@ public class CompaniesController : ControllerBase
             return NotFound("Empresa no encontrada.");
         }
 
-        return Ok(company);
+        return Ok(new
+        {
+            company.Id,
+            company.Name,
+            company.Rfc,
+            company.Email,
+            company.Phone,
+            company.Active,
+            company.SyncSource,
+            company.SyncStatus,
+            company.SyncError,
+            company.UpdatedAt
+        });
     }
 }
 

@@ -5,6 +5,20 @@ using SoporteMida.Api.Workers;
 using SoporteMida.Api.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowConfiguredOrigins", policy =>
+    {
+        policy
+            .WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 builder.Services.Configure<SupabaseSettings>(
     builder.Configuration.GetSection("Supabase")
@@ -17,6 +31,7 @@ builder.Services.AddScoped<ContpaqiCustomerSyncService>();
 builder.Services.AddScoped<ContpaqiContactSyncService>();
 builder.Services.AddScoped<ContpaqiAgentSyncService>();
 builder.Services.AddHostedService<ContpaqiSyncWorker>();
+builder.Services.AddScoped<ContpaqiReverseSyncService>();
 builder.Services.Configure<ContpaqiSyncOptions>(
     builder.Configuration.GetSection("ContpaqiSync"));
 
@@ -39,7 +54,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
+app.UseCors("AllowConfiguredOrigins");
 app.UseAuthorization();
 app.MapControllers();
 
