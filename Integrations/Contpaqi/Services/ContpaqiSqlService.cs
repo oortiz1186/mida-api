@@ -786,5 +786,148 @@ ORDER BY c.CRAZONSOCIAL";
             throw new Exception($"No se encontró cliente CONTPAQi con ID {customerId}.");
         }
     }
+    public async Task<int> InsertAdditionalContactFromMidaAsync(
+    string databaseName,
+    int customerId,
+    string fullName,
+    string? email,
+    string? phone,
+    bool active)
+    {
+        var builder = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = databaseName
+        };
+
+        using var connection = new SqlConnection(builder.ConnectionString);
+        await connection.OpenAsync();
+
+        const string getNextIdSql = @"
+        SELECT ISNULL(MAX(CIDDIRECCION), 0) + 1
+        FROM admDomicilios";
+
+        using var getNextIdCommand = new SqlCommand(getNextIdSql, connection);
+        var nextId = Convert.ToInt32(await getNextIdCommand.ExecuteScalarAsync());
+
+        const string insertSql = @"
+        INSERT INTO admDomicilios (
+            CIDDIRECCION,
+            CIDCATALOGO,
+            CTIPOCATALOGO,
+            CNOMBRECALLE,
+            CEMAIL,
+            CTELEFONO1,
+            CTELEFONO2,
+            CTIPODIRECCION,
+            CSUCURSAL
+        )
+        VALUES (
+            @addressId,
+            @customerId,
+            6,
+            @fullName,
+            @email,
+            @phone,
+            @phone,
+            0,
+            @branchName
+        )";
+
+        using var command = new SqlCommand(insertSql, connection);
+
+        command.Parameters.AddWithValue("@addressId", nextId);
+        command.Parameters.AddWithValue("@customerId", customerId);
+        command.Parameters.AddWithValue("@fullName", fullName);
+        command.Parameters.AddWithValue("@email", string.IsNullOrWhiteSpace(email) ? DBNull.Value : email);
+        command.Parameters.AddWithValue("@phone", string.IsNullOrWhiteSpace(phone) ? DBNull.Value : phone);
+        command.Parameters.AddWithValue("@branchName", fullName);
+
+        await command.ExecuteNonQueryAsync();
+
+        return nextId;
+    }
+
+    public async Task UpdateAdditionalContactFromMidaAsync(
+        string databaseName,
+        int addressId,
+        int customerId,
+        string fullName,
+        string? email,
+        string? phone,
+        bool active)
+    {
+        var builder = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = databaseName
+        };
+
+        using var connection = new SqlConnection(builder.ConnectionString);
+        await connection.OpenAsync();
+
+        const string sql = @"
+        UPDATE admDomicilios
+        SET
+            CIDCATALOGO = @customerId,
+            CTIPOCATALOGO = 6,
+            CNOMBRECALLE = @fullName,
+            CEMAIL = @email,
+            CTELEFONO1 = @phone,
+            CTELEFONO2 = @phone,
+            CSUCURSAL = @branchName
+        WHERE CIDDIRECCION = @addressId";
+
+        using var command = new SqlCommand(sql, connection);
+
+        command.Parameters.AddWithValue("@addressId", addressId);
+        command.Parameters.AddWithValue("@customerId", customerId);
+        command.Parameters.AddWithValue("@fullName", fullName);
+        command.Parameters.AddWithValue("@email", string.IsNullOrWhiteSpace(email) ? DBNull.Value : email);
+        command.Parameters.AddWithValue("@phone", string.IsNullOrWhiteSpace(phone) ? DBNull.Value : phone);
+        command.Parameters.AddWithValue("@branchName", fullName);
+
+        var affected = await command.ExecuteNonQueryAsync();
+
+        if (affected == 0)
+        {
+            throw new Exception($"No se encontró contacto CONTPAQi con CIDDIRECCION {addressId}.");
+        }
+    }
+    public async Task UpdateAgentFromMidaAsync(
+    string databaseName,
+    int agentId,
+    string name,
+    string? code,
+    bool active)
+    {
+        var builder = new SqlConnectionStringBuilder(_connectionString)
+        {
+            InitialCatalog = databaseName
+        };
+
+        using var connection = new SqlConnection(builder.ConnectionString);
+        await connection.OpenAsync();
+
+        const string sql = @"
+        UPDATE admAgentes
+        SET
+            CNOMBREAGENTE = @name,
+            CCODIGOAGENTE = @code,
+            CTIPOAGENTE = @type
+        WHERE CIDAGENTE = @agentId";
+
+        using var command = new SqlCommand(sql, connection);
+
+        command.Parameters.AddWithValue("@agentId", agentId);
+        command.Parameters.AddWithValue("@name", name);
+        command.Parameters.AddWithValue("@code", string.IsNullOrWhiteSpace(code) ? DBNull.Value : code);
+        command.Parameters.AddWithValue("@type", active ? 1 : 0);
+
+        var affected = await command.ExecuteNonQueryAsync();
+
+        if (affected == 0)
+        {
+            throw new Exception($"No se encontró agente CONTPAQi con ID {agentId}.");
+        }
+    }
 }
 

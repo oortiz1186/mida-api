@@ -1,10 +1,11 @@
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
+using SoporteMida.Api.Services.Sync;
 
 namespace SoporteMida.Api.Models;
 
 [Table("contacts")]
-public class Contact : BaseModel
+public class Contact : BaseModel, ISyncEntity
 {
     [PrimaryKey("id", false)]
     public Guid Id { get; set; }
@@ -40,6 +41,11 @@ public class Contact : BaseModel
 
     [Column("updated_at")]
     public DateTime? UpdatedAt { get; set; }
+    [Column("last_local_change_at")]
+    public DateTime? LastLocalChangeAt { get; set; }
+
+    [Column("last_remote_change_at")]
+    public DateTime? LastRemoteChangeAt { get; set; }
 
     [Column("contpaqi_address_id")]
     public int? ContpaqiAddressId { get; set; }
@@ -51,4 +57,5 @@ public class Contact : BaseModel
 
     [Column("sync_error")]
     public string? SyncError { get; set; }
+
 }
