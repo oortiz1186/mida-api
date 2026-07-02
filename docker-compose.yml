@@ -1,0 +1,14 @@
+services:
+  soporte-mida-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: soporte_mida_api
+    restart: unless-stopped
+    ports:
+      - "5247:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+    volumes:
+      - ./appsettings.Production.json:/app/appsettings.Production.json:ro

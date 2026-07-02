@@ -1,0 +1,15 @@
+bin/
+obj/
+.vs/
+.git/
+.gitignore
+
+appsettings.Development.json
+appsettings.Production.json
+
+.env
+.env.*
+
+Dockerfile
+docker-compose*.yml
+README.md
