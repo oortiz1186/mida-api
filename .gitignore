@@ -1,6 +1,10 @@
 appsettings.Development.json
+appsettings.Production.json
 *.Development.json
 .env
 .env.*
 **/bin/
 **/obj/
+bin/
+obj/
+.vs/
